@@ -43,7 +43,7 @@ jobs:
           rustup toolchain install nightly --component miri
           cargo +nightly miri test
       - name: 🛡️ Audit Dependencies (cargo-deny)
-        uses: EmbarkStudios/cargo-deny-action@v1
+        uses: EmbarkStudios/cargo-deny-action@v2
 
   wasm-size-check:
     name: 📦 WASM 64KB Limit Check
