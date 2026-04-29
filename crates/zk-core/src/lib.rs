@@ -74,31 +74,40 @@ impl Bn254 {
     /// BN254 scalar field modulus r (order of G1/G2).
     pub const BASE_MODULUS: ethnum::u256 = ethnum::u256::from_words(
         0x30644e72e131a029b85045b68181585d_u128,
-        0x97816a916871ca8d3c208c16d87cfd47_u128,
+        0x2833e84879b9709143e1f593f0000001_u128,
+    );
+    /// Alias for BASE_MODULUS — used by the Legendre check functions.
+    pub const FR_MODULUS: ethnum::u256 = ethnum::u256::from_words(
+        0x30644e72e131a029b85045b68181585d_u128,
+        0x2833e84879b9709143e1f593f0000001_u128,
     );
 
     /// BN254 base field modulus p (coordinate field of the curve).
     pub const FQ_MODULUS: ethnum::u256 = ethnum::u256::from_words(
         0x30644e72e131a029b85045b68181585d_u128,
-        0x2833e84879b9709142e1f593f0000001_u128,
+        0x97816a916871ca8d3c208c16d87cfd47_u128,
     );
 
     /// G1 coefficient B for y^2 = x^3 + B
     pub const G1_B: u256 = u256::from_words(0u128, 3u128);
 
-    pub fn is_valid_scalar(val: u256) -> bool {
-        val < Self::BASE_MODULUS
-    }
+    /// (r - 1) / 2 — Legendre exponent for the scalar field Fr.
+    /// Pre-computed to avoid runtime division; used by `legendre_fr`.
+    pub const LEGENDRE_EXP_FR: ethnum::u256 = ethnum::u256::from_words(
+        0x183227397098d014dc2822db40c0ac2e_u128,
+        0x9419f4243cdcb848a1f0fac9f8000000_u128,
+    );
+
+    /// (p - 1) / 2 — Legendre exponent for the base field Fq.
+    /// Pre-computed to avoid runtime division; used by `legendre_fq`.
+    pub const LEGENDRE_EXP_FQ: ethnum::u256 = ethnum::u256::from_words(
+        0x183227397098d014dc2822db40c0ac2e_u128,
+        0xcbc0b548b438e5469e10460b6c3e7ea3_u128,
+    );
 
     // ── Canonical byte serialization ──────────────────────────────────────────
-    //
-    // The canonical wire format for BN254 field elements is 32-byte big-endian,
-    // matching the encoding used by snarkjs, circom, and rapidsnark.
-    // Deserialization enforces a strict range check: any input >= modulus is
-    // rejected, preventing malformed scalars from entering field arithmetic.
 
     /// Encodes a scalar field element as 32-byte big-endian.
-    /// The caller must ensure `a < BASE_MODULUS`; no reduction is applied.
     pub fn fr_to_bytes(a: u256) -> [u8; 32] {
         a.to_be_bytes()
     }
@@ -115,7 +124,6 @@ impl Bn254 {
     }
 
     /// Encodes a base field element as 32-byte big-endian.
-    /// The caller must ensure `a < FQ_MODULUS`; no reduction is applied.
     pub fn fq_to_bytes(a: u256) -> [u8; 32] {
         a.to_be_bytes()
     }
@@ -131,10 +139,13 @@ impl Bn254 {
         }
     }
 
-    pub fn add(a: u256, b: u256) -> u256 {
+    // ── Private generic helpers ───────────────────────────────────────────────
+
+    #[inline(always)]
+    fn add_mod(a: u256, b: u256, modulus: u256) -> u256 {
         let (sum, overflow) = a.overflowing_add(b);
-        if overflow || sum >= Self::BASE_MODULUS {
-            sum.wrapping_sub(Self::BASE_MODULUS)
+        if overflow || sum >= modulus {
+            sum.wrapping_sub(modulus)
         } else {
             sum
         }
@@ -149,90 +160,163 @@ impl Bn254 {
         }
     }
 
-    /// Modular Multiplication: (a * b) % BASE_MODULUS
-    /// Implements manual 512-bit long multiplication to bypass library limitations.
-    pub fn mul(a: u256, b: u256) -> u256 {
-        if a == 0 || b == 0 {
-            return u256::from(0u8);
+    /// Modular Multiplication: (a * b) % modulus
+    /// Uses double-and-add to avoid 512-bit intermediate products.
+    #[inline(always)]
+    fn mul_mod(a: u256, b: u256, modulus: u256) -> u256 {
+        let mut result = u256::from(0u8);
+        let mut a = a % modulus;
+        let mut b = b % modulus;
+        while b > 0 {
+            if b & u256::from(1u8) != u256::from(0u8) {
+                result = Self::add_mod(result, a, modulus);
+            }
+            a = Self::add_mod(a, a, modulus);
+            b >>= 1;
         }
-
-        // Split a and b into 128-bit halves
-        let a_low = u256::from(a.as_u128());
-        let a_high = a >> 128;
-        let b_low = u256::from(b.as_u128());
-        let b_high = b >> 128;
-
-        // Schoolbook multiplication (a_hi*2^128 + a_lo) * (b_hi*2^128 + b_lo)
-        // This yields 4 partial products
-        let p0 = a_low * b_low;
-        let p1 = a_low * b_high;
-        let p2 = a_high * b_low;
-        let p3 = a_high * b_high;
-
-        // Perform modular reduction on each partial product stage
-        // to keep everything within 256-bit bounds.
-        let mut res = p0 % Self::BASE_MODULUS;
-
-        // Handle p1 and p2 (shifted by 128 bits)
-        let mut p1_p2 = p1 % Self::BASE_MODULUS;
-        p1_p2 = Self::add(p1_p2, p2 % Self::BASE_MODULUS);
-        for _ in 0..128 {
-            p1_p2 = Self::add(p1_p2, p1_p2); // Modular doubling
-        }
-        res = Self::add(res, p1_p2);
-
-        // Handle p3 (shifted by 256 bits)
-        let mut p3_red = p3 % Self::BASE_MODULUS;
-        for _ in 0..256 {
-            p3_red = Self::add(p3_red, p3_red); // Modular doubling
-        }
-        res = Self::add(res, p3_red);
-
-        res
+        result
     }
 
-    pub fn pow(mut base: u256, mut exp: u256) -> u256 {
+    #[inline(always)]
+    fn pow_mod(mut base: u256, mut exp: u256, modulus: u256) -> u256 {
         let mut res = u256::from(1u8);
-        for _ in 0..256 {
-            let bit = exp & u256::from(1u8);
-
-            // Mask is MAX if bit is 1, ZERO if bit is 0
-            // wrapping_sub: 0 - 0 = 0, 0 - 1 = MAX
-            let mask = u256::from(0u8).wrapping_sub(bit);
-
-            let product = Self::mul(res, base);
-
-            // Constant-time selection: if bit == 1 { product } else { res }
-            res = (product & mask) | (res & !mask);
-
-            base = Self::mul(base, base);
+        while exp > 0 {
+            if exp & u256::from(1u8) != u256::from(0u8) {
+                res = Self::mul_mod(res, base, modulus);
+            }
+            base = Self::mul_mod(base, base, modulus);
             exp >>= 1;
         }
         res
+    }
+
+    // ── Public Fr (scalar field) arithmetic ──────────────────────────────────
+
+    pub fn is_valid_scalar(val: u256) -> bool {
+        val < Self::FR_MODULUS
+    }
+
+    pub fn add(a: u256, b: u256) -> u256 {
+        Self::add_mod(a, b, Self::FR_MODULUS)
+    }
+
+    pub fn mul(a: u256, b: u256) -> u256 {
+        Self::mul_mod(a, b, Self::FR_MODULUS)
+    }
+
+    pub fn pow(base: u256, exp: u256) -> u256 {
+        Self::pow_mod(base, exp, Self::FR_MODULUS)
     }
 
     pub fn invert(a: u256) -> u256 {
         if a == 0 {
             return u256::from(0u8);
         }
-        let exponent = Self::BASE_MODULUS - u256::from(2u8);
+        let exponent = Self::FR_MODULUS - u256::from(2u8);
         Self::pow(a, exponent)
+    }
+
+    // ── Public Fq (base field) arithmetic ────────────────────────────────────
+
+    pub fn mul_fq(a: u256, b: u256) -> u256 {
+        Self::mul_mod(a, b, Self::FQ_MODULUS)
+    }
+
+    pub fn add_fq(a: u256, b: u256) -> u256 {
+        Self::add_mod(a, b, Self::FQ_MODULUS)
+    }
+
+    pub fn sub_fq(a: u256, b: u256) -> u256 {
+        let (res, underflow) = a.overflowing_sub(b);
+        if underflow {
+            res.wrapping_add(Self::FQ_MODULUS)
+        } else {
+            res
+        }
+    }
+
+    pub fn invert_fq(a: u256) -> u256 {
+        if a == 0 {
+            return u256::from(0u8);
+        }
+        let exponent = Self::FQ_MODULUS - u256::from(2u8);
+        Self::pow_mod(a, exponent, Self::FQ_MODULUS)
     }
 
     pub fn is_valid_g1(x: u256, y: u256) -> bool {
         if x == 0 && y == 0 {
             return false;
         }
-        if x >= Self::BASE_MODULUS || y >= Self::BASE_MODULUS {
+        if x >= Self::FQ_MODULUS || y >= Self::FQ_MODULUS {
             return false;
         }
 
-        let y_sq = Self::mul(y, y);
-        let x_sq = Self::mul(x, x);
-        let x_cb = Self::mul(x_sq, x);
-        let rhs = Self::add(x_cb, Self::G1_B);
+        let y_sq = Self::mul_mod(y, y, Self::FQ_MODULUS);
+        let x_sq = Self::mul_mod(x, x, Self::FQ_MODULUS);
+        let x_cb = Self::mul_mod(x_sq, x, Self::FQ_MODULUS);
+        let rhs = Self::add_mod(x_cb, u256::from(3u8), Self::FQ_MODULUS);
 
         y_sq == rhs
+    }
+
+    // ── Legendre symbol / quadratic residue ──────────────────────────────────
+
+    /// Legendre symbol (a | r) for the BN254 scalar field Fr.
+    ///
+    /// Computes `a^((r-1)/2) mod r` using the pre-computed [`LEGENDRE_EXP_FR`]
+    /// constant — no runtime division.
+    ///
+    /// Returns:
+    /// -  `0`  if `a == 0`
+    /// -  `1`  if `a` is a non-zero quadratic residue mod r
+    /// - `-1`  if `a` is a quadratic non-residue mod r
+    pub fn legendre_fr(a: u256) -> i8 {
+        if a == 0 {
+            return 0;
+        }
+        let result = Self::pow_mod(a, Self::LEGENDRE_EXP_FR, Self::FR_MODULUS);
+        if result == u256::from(1u8) {
+            1
+        } else {
+            -1 // result == FR_MODULUS - 1, i.e. -1 in the field
+        }
+    }
+
+    /// Legendre symbol (a | p) for the BN254 base field Fq.
+    ///
+    /// Computes `a^((p-1)/2) mod p` using the pre-computed [`LEGENDRE_EXP_FQ`]
+    /// constant — no runtime division.
+    ///
+    /// Returns:
+    /// -  `0`  if `a == 0`
+    /// -  `1`  if `a` is a non-zero quadratic residue mod p
+    /// - `-1`  if `a` is a quadratic non-residue mod p
+    pub fn legendre_fq(a: u256) -> i8 {
+        if a == 0 {
+            return 0;
+        }
+        let result = Self::pow_mod(a, Self::LEGENDRE_EXP_FQ, Self::FQ_MODULUS);
+        if result == u256::from(1u8) {
+            1
+        } else {
+            -1 // result == FQ_MODULUS - 1, i.e. -1 in the field
+        }
+    }
+
+    /// Returns `true` if `a` is a quadratic residue in the scalar field Fr.
+    ///
+    /// Convenience wrapper around [`legendre_fr`]. Zero is **not** considered
+    /// a quadratic residue by this function.
+    pub fn is_quadratic_residue_fr(a: u256) -> bool {
+        Self::legendre_fr(a) == 1
+    }
+
+    /// Returns `true` if `a` is a quadratic residue in the base field Fq.
+    ///
+    /// Convenience wrapper around [`legendre_fq`]. Zero is **not** considered
+    /// a quadratic residue by this function.
+    pub fn is_quadratic_residue_fq(a: u256) -> bool {
+        Self::legendre_fq(a) == 1
     }
 }
 
@@ -358,13 +442,13 @@ impl G1Jacobian {
             return G1Affine::IDENTITY;
         }
 
-        let z_inv = Bn254::invert(self.z);
-        let z_inv2 = Bn254::mul(z_inv, z_inv);
-        let z_inv3 = Bn254::mul(z_inv2, z_inv);
+        let z_inv = Bn254::invert_fq(self.z);
+        let z_inv2 = Bn254::mul_fq(z_inv, z_inv);
+        let z_inv3 = Bn254::mul_fq(z_inv2, z_inv);
 
         G1Affine {
-            x: Bn254::mul(self.x, z_inv2),
-            y: Bn254::mul(self.y, z_inv3),
+            x: Bn254::mul_fq(self.x, z_inv2),
+            y: Bn254::mul_fq(self.y, z_inv3),
         }
     }
 
@@ -383,34 +467,34 @@ impl G1Jacobian {
         // Y' = M * (S - X') - 8 * Y^4
         // Z' = 2 * Y * Z
 
-        let x_sq = Bn254::mul(self.x, self.x);
-        let y_sq = Bn254::mul(self.y, self.y);
-        let y_sq_sq = Bn254::mul(y_sq, y_sq);
+        let x_sq = Bn254::mul_fq(self.x, self.x);
+        let y_sq = Bn254::mul_fq(self.y, self.y);
+        let y_sq_sq = Bn254::mul_fq(y_sq, y_sq);
 
         // S = 4 * X * Y^2
-        let mut s = Bn254::mul(self.x, y_sq);
-        s = Bn254::add(s, s);
-        s = Bn254::add(s, s);
+        let mut s = Bn254::mul_fq(self.x, y_sq);
+        s = Bn254::add_fq(s, s);
+        s = Bn254::add_fq(s, s);
 
         // M = 3 * X^2
-        let mut m = Bn254::add(x_sq, x_sq);
-        m = Bn254::add(m, x_sq);
+        let mut m = Bn254::add_fq(x_sq, x_sq);
+        m = Bn254::add_fq(m, x_sq);
 
         // X' = M^2 - 2 * S
-        let m_sq = Bn254::mul(m, m);
-        let s2 = Bn254::add(s, s);
-        let x_res = Bn254::sub(m_sq, s2);
+        let m_sq = Bn254::mul_fq(m, m);
+        let s2 = Bn254::add_fq(s, s);
+        let x_res = Bn254::sub_fq(m_sq, s2);
 
         // Y' = M * (S - X') - 8 * Y^4
-        let s_minus_x = Bn254::sub(s, x_res);
-        let m_times_s_minus_x = Bn254::mul(m, s_minus_x);
-        let mut y4_8 = Bn254::add(y_sq_sq, y_sq_sq);
-        y4_8 = Bn254::add(y4_8, y4_8);
-        y4_8 = Bn254::add(y4_8, y4_8);
-        let y_res = Bn254::sub(m_times_s_minus_x, y4_8);
+        let s_minus_x = Bn254::sub_fq(s, x_res);
+        let m_times_s_minus_x = Bn254::mul_fq(m, s_minus_x);
+        let mut y4_8 = Bn254::add_fq(y_sq_sq, y_sq_sq);
+        y4_8 = Bn254::add_fq(y4_8, y4_8);
+        y4_8 = Bn254::add_fq(y4_8, y4_8);
+        let y_res = Bn254::sub_fq(m_times_s_minus_x, y4_8);
 
         // Z' = 2 * Y * Z
-        let z_res = Bn254::add(Bn254::mul(self.y, self.z), Bn254::mul(self.y, self.z));
+        let z_res = Bn254::add_fq(Bn254::mul_fq(self.y, self.z), Bn254::mul_fq(self.y, self.z));
 
         Self {
             x: x_res,
@@ -436,12 +520,12 @@ impl G1Jacobian {
         // Y3 = R * (U1 * H^2 - X3) - S1 * H^3
         // Z3 = H * Z1
 
-        let z1_sq = Bn254::mul(self.z, self.z);
-        let z1_cb = Bn254::mul(z1_sq, self.z);
+        let z1_sq = Bn254::mul_fq(self.z, self.z);
+        let z1_cb = Bn254::mul_fq(z1_sq, self.z);
 
         // U2 = X2 * Z1^2, S2 = Y2 * Z1^3
-        let u2 = Bn254::mul(other.x, z1_sq);
-        let s2 = Bn254::mul(other.y, z1_cb);
+        let u2 = Bn254::mul_fq(other.x, z1_sq);
+        let s2 = Bn254::mul_fq(other.y, z1_cb);
 
         // H = U2 - U1, R = S2 - S1
         if self.x == u2 {
@@ -452,27 +536,27 @@ impl G1Jacobian {
             }
         }
 
-        let h = Bn254::sub(u2, self.x);
-        let r = Bn254::sub(s2, self.y);
+        let h = Bn254::sub_fq(u2, self.x);
+        let r = Bn254::sub_fq(s2, self.y);
 
-        let h_sq = Bn254::mul(h, h);
-        let h_cb = Bn254::mul(h_sq, h);
+        let h_sq = Bn254::mul_fq(h, h);
+        let h_cb = Bn254::mul_fq(h_sq, h);
 
         // X3 = R^2 - H^3 - 2 * U1 * H^2
-        let r_sq = Bn254::mul(r, r);
-        let u1_h2 = Bn254::mul(self.x, h_sq);
-        let u1_h2_2 = Bn254::add(u1_h2, u1_h2);
-        let mut x_res = Bn254::sub(r_sq, h_cb);
-        x_res = Bn254::sub(x_res, u1_h2_2);
+        let r_sq = Bn254::mul_fq(r, r);
+        let u1_h2 = Bn254::mul_fq(self.x, h_sq);
+        let u1_h2_2 = Bn254::add_fq(u1_h2, u1_h2);
+        let mut x_res = Bn254::sub_fq(r_sq, h_cb);
+        x_res = Bn254::sub_fq(x_res, u1_h2_2);
 
         // Y3 = R * (U1 * H^2 - X3) - S1 * H^3
-        let u1_h2_minus_x3 = Bn254::sub(u1_h2, x_res);
-        let r_times_diff = Bn254::mul(r, u1_h2_minus_x3);
-        let s1_h3 = Bn254::mul(self.y, h_cb);
-        let y_res = Bn254::sub(r_times_diff, s1_h3);
+        let u1_h2_minus_x3 = Bn254::sub_fq(u1_h2, x_res);
+        let r_times_diff = Bn254::mul_fq(r, u1_h2_minus_x3);
+        let s1_h3 = Bn254::mul_fq(self.y, h_cb);
+        let y_res = Bn254::sub_fq(r_times_diff, s1_h3);
 
         // Z3 = H * Z1
-        let z_res = Bn254::mul(h, self.z);
+        let z_res = Bn254::mul_fq(h, self.z);
 
         Self {
             x: x_res,
@@ -491,15 +575,15 @@ impl G1Jacobian {
             return *self;
         }
 
-        let z1_sq = Bn254::mul(self.z, self.z);
-        let z2_sq = Bn254::mul(other.z, other.z);
-        let z1_cb = Bn254::mul(z1_sq, self.z);
-        let z2_cb = Bn254::mul(z2_sq, other.z);
+        let z1_sq = Bn254::mul_fq(self.z, self.z);
+        let z2_sq = Bn254::mul_fq(other.z, other.z);
+        let z1_cb = Bn254::mul_fq(z1_sq, self.z);
+        let z2_cb = Bn254::mul_fq(z2_sq, other.z);
 
-        let u1 = Bn254::mul(self.x, z2_sq);
-        let u2 = Bn254::mul(other.x, z1_sq);
-        let s1 = Bn254::mul(self.y, z2_cb);
-        let s2 = Bn254::mul(other.y, z1_cb);
+        let u1 = Bn254::mul_fq(self.x, z2_sq);
+        let u2 = Bn254::mul_fq(other.x, z1_sq);
+        let s1 = Bn254::mul_fq(self.y, z2_cb);
+        let s2 = Bn254::mul_fq(other.y, z1_cb);
 
         if u1 == u2 {
             if s1 == s2 {
@@ -509,25 +593,25 @@ impl G1Jacobian {
             }
         }
 
-        let h = Bn254::sub(u2, u1);
-        let r = Bn254::sub(s2, s1);
+        let h = Bn254::sub_fq(u2, u1);
+        let r = Bn254::sub_fq(s2, s1);
 
-        let h_sq = Bn254::mul(h, h);
-        let h_cb = Bn254::mul(h_sq, h);
+        let h_sq = Bn254::mul_fq(h, h);
+        let h_cb = Bn254::mul_fq(h_sq, h);
 
-        let r_sq = Bn254::mul(r, r);
-        let u1_h2 = Bn254::mul(u1, h_sq);
-        let u1_h2_2 = Bn254::add(u1_h2, u1_h2);
+        let r_sq = Bn254::mul_fq(r, r);
+        let u1_h2 = Bn254::mul_fq(u1, h_sq);
+        let u1_h2_2 = Bn254::add_fq(u1_h2, u1_h2);
 
-        let mut x_res = Bn254::sub(r_sq, h_cb);
-        x_res = Bn254::sub(x_res, u1_h2_2);
+        let mut x_res = Bn254::sub_fq(r_sq, h_cb);
+        x_res = Bn254::sub_fq(x_res, u1_h2_2);
 
-        let u1_h2_minus_x3 = Bn254::sub(u1_h2, x_res);
-        let r_times_diff = Bn254::mul(r, u1_h2_minus_x3);
-        let s1_h3 = Bn254::mul(s1, h_cb);
-        let y_res = Bn254::sub(r_times_diff, s1_h3);
+        let u1_h2_minus_x3 = Bn254::sub_fq(u1_h2, x_res);
+        let r_times_diff = Bn254::mul_fq(r, u1_h2_minus_x3);
+        let s1_h3 = Bn254::mul_fq(s1, h_cb);
+        let y_res = Bn254::sub_fq(r_times_diff, s1_h3);
 
-        let z_res = Bn254::mul(Bn254::mul(h, self.z), other.z);
+        let z_res = Bn254::mul_fq(Bn254::mul_fq(h, self.z), other.z);
 
         Self {
             x: x_res,
@@ -544,7 +628,7 @@ impl G1Affine {
         }
         Self {
             x: self.x,
-            y: Bn254::sub(u256::ZERO, self.y),
+            y: Bn254::sub_fq(u256::ZERO, self.y),
         }
     }
 }
@@ -820,11 +904,19 @@ mod tests {
         assert_eq!(Bn254::fq_from_bytes([0xFF; 32]), None);
     }
 
+    // ── legendre_fr ───────────────────────────────────────────────────────────
+
     #[test]
     fn fr_and_fq_have_independent_bounds() {
+        // FQ_MODULUS is not a valid Fq element (out of range)
         let p_as_bytes = Bn254::fq_to_bytes(Bn254::FQ_MODULUS);
         assert_eq!(Bn254::fq_from_bytes(p_as_bytes), None);
-        assert_eq!(Bn254::fr_from_bytes(p_as_bytes), Some(Bn254::FQ_MODULUS));
+        // FQ_MODULUS > FR_MODULUS numerically, so it is also out of range for Fr
+        assert_eq!(Bn254::fr_from_bytes(p_as_bytes), None);
+        // FR_MODULUS is not a valid Fr element, but IS a valid Fq element (FR < FQ)
+        let r_as_bytes = Bn254::fr_to_bytes(Bn254::FR_MODULUS);
+        assert_eq!(Bn254::fr_from_bytes(r_as_bytes), None);
+        assert_eq!(Bn254::fq_from_bytes(r_as_bytes), Some(Bn254::FR_MODULUS));
     }
 
     // ── ElGamal ───────────────────────────────────────────────────────────────
@@ -851,5 +943,113 @@ mod tests {
         let decrypted_point = ciphertext.decrypt_amount_point(regulator_priv_key).unwrap();
 
         assert_eq!(decrypted_point, expected_amount_point);
+    }
+
+    // ── legendre_fr ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn legendre_fr_zero_returns_0() {
+        assert_eq!(Bn254::legendre_fr(u256::from(0u8)), 0);
+    }
+
+    #[test]
+    fn legendre_fr_one_is_residue() {
+        assert_eq!(Bn254::legendre_fr(u256::from(1u8)), 1);
+    }
+
+    #[test]
+    fn legendre_fr_perfect_square_is_residue() {
+        assert_eq!(Bn254::legendre_fr(u256::from(4u8)), 1);
+    }
+
+    #[test]
+    fn legendre_fr_any_square_is_residue() {
+        let x = u256::from(17u8);
+        let x_sq = Bn254::mul(x, x);
+        assert_eq!(Bn254::legendre_fr(x_sq), 1);
+    }
+
+    #[test]
+    fn legendre_fr_five_is_non_residue() {
+        assert_eq!(Bn254::legendre_fr(u256::from(5u8)), -1);
+    }
+
+    #[test]
+    fn legendre_fr_neg_one_is_residue() {
+        let neg_one = Bn254::FR_MODULUS - u256::from(1u8);
+        assert_eq!(Bn254::legendre_fr(neg_one), 1);
+    }
+
+    // ── legendre_fq ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn legendre_fq_zero_returns_0() {
+        assert_eq!(Bn254::legendre_fq(u256::from(0u8)), 0);
+    }
+
+    #[test]
+    fn legendre_fq_one_is_residue() {
+        assert_eq!(Bn254::legendre_fq(u256::from(1u8)), 1);
+    }
+
+    #[test]
+    fn legendre_fq_perfect_square_is_residue() {
+        assert_eq!(Bn254::legendre_fq(u256::from(4u8)), 1);
+        assert_eq!(Bn254::legendre_fq(u256::from(9u8)), 1);
+    }
+
+    #[test]
+    fn legendre_fq_five_is_non_residue() {
+        assert_eq!(Bn254::legendre_fq(u256::from(5u8)), -1);
+    }
+
+    // ── is_quadratic_residue ──────────────────────────────────────────────────
+
+    #[test]
+    fn is_qr_fr_square_is_true() {
+        assert!(Bn254::is_quadratic_residue_fr(u256::from(4u8)));
+    }
+
+    #[test]
+    fn is_qr_fr_non_residue_is_false() {
+        assert!(!Bn254::is_quadratic_residue_fr(u256::from(5u8)));
+    }
+
+    #[test]
+    fn is_qr_fr_zero_is_false() {
+        assert!(!Bn254::is_quadratic_residue_fr(u256::from(0u8)));
+    }
+
+    #[test]
+    fn is_qr_fq_square_is_true() {
+        assert!(Bn254::is_quadratic_residue_fq(u256::from(4u8)));
+    }
+
+    #[test]
+    fn is_qr_fq_non_residue_is_false() {
+        assert!(!Bn254::is_quadratic_residue_fq(u256::from(5u8)));
+    }
+
+    #[test]
+    fn is_qr_fq_zero_is_false() {
+        assert!(!Bn254::is_quadratic_residue_fq(u256::from(0u8)));
+    }
+
+    // ── Constant sanity checks ────────────────────────────────────────────────
+
+    #[test]
+    fn legendre_exp_fr_is_half_of_r_minus_one() {
+        let doubled = Bn254::LEGENDRE_EXP_FR
+            .checked_add(Bn254::LEGENDRE_EXP_FR)
+            .unwrap();
+        assert_eq!(doubled, Bn254::FR_MODULUS - u256::from(1u8));
+    }
+
+    #[test]
+    fn legendre_exp_fq_is_half_of_p_minus_one() {
+        let doubled = Bn254::LEGENDRE_EXP_FQ
+            .checked_add(Bn254::LEGENDRE_EXP_FQ)
+            .unwrap();
+        assert_eq!(doubled, Bn254::FQ_MODULUS - u256::from(1u8));
     }
 }
