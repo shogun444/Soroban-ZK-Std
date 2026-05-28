@@ -35,7 +35,6 @@ impl G2Affine {
         bytes
     }
 }
-
 /// Serializes a G1Affine point into a 64-byte array.
 ///
 /// ## Byte Layout
