@@ -19,18 +19,18 @@ impl G2Affine {
     ///
     /// ## Byte Layout
     /// The 128 bytes are structured as:
-    /// - Bytes 0..32:   `x.0` (X real / c0)
-    /// - Bytes 32..64:  `x.1` (X imaginary / c1)
-    /// - Bytes 64..96:  `y.0` (Y real / c0)
-    /// - Bytes 96..128: `y.1` (Y imaginary / c1)
+    /// - Bytes 0..32:   `x.1` (X imaginary / c1)
+    /// - Bytes 32..64:  `x.0` (X real / c0)
+    /// - Bytes 64..96:  `y.1` (Y imaginary / c1)
+    /// - Bytes 96..128: `y.0` (Y real / c0)
     ///
     /// All 32-byte chunks are encoded in Big-Endian format.
     pub fn to_bytes(&self) -> [u8; 128] {
         let mut bytes = [0u8; 128];
-        bytes[0..32].copy_from_slice(&self.x.0.to_be_bytes());   // X c0
-        bytes[32..64].copy_from_slice(&self.x.1.to_be_bytes());  // X c1
-        bytes[64..96].copy_from_slice(&self.y.0.to_be_bytes());  // Y c0
-        bytes[96..128].copy_from_slice(&self.y.1.to_be_bytes()); // Y c1
+        bytes[0..32].copy_from_slice(&self.x.1.to_be_bytes());   // X c1
+        bytes[32..64].copy_from_slice(&self.x.0.to_be_bytes());  // X c0
+        bytes[64..96].copy_from_slice(&self.y.1.to_be_bytes());  // Y c1
+        bytes[96..128].copy_from_slice(&self.y.0.to_be_bytes()); // Y c0
         bytes
     }
 }
@@ -100,13 +100,13 @@ mod tests {
             x: (
                 // x_c0 (real)
                 u256::from_str_radix(
-                    "10822403556616783d294cae447f68c351084c519bc131644754784460d3d548",
+                    "1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed",
                     16,
                 )
                 .unwrap(),
                 // x_c1 (imaginary)
                 u256::from_str_radix(
-                    "012c40590818290663486c8f967a1262d47155ec1608677c77d0a64983050961",
+                    "198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2",
                     16,
                 )
                 .unwrap(),
@@ -114,13 +114,13 @@ mod tests {
             y: (
                 // y_c0 (real)
                 u256::from_str_radix(
-                    "0689357dbd07bdc858f01f28fd87f6b6e11802996d9ed800f1351194380126d4",
+                    "12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa",
                     16,
                 )
                 .unwrap(),
                 // y_c1 (imaginary)
                 u256::from_str_radix(
-                    "12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa",
+                    "090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b",
                     16,
                 )
                 .unwrap(),
