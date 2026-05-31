@@ -220,6 +220,22 @@ fn eip196_g1mul_scalar_order_returns_identity() {
     assert_eq!(result.y, u256::from(0u8));
 }
 
+#[test]
+fn eip196_is_valid_g1_subgroup_rejects_invalid_curve_point() {
+    // Choose a coordinate pair that is not on the BN254 curve.
+    let invalid = g1(
+        "0000000000000000000000000000000000000000000000000000000000000002",
+        "0000000000000000000000000000000000000000000000000000000000000004",
+    );
+    assert!(!Bn254::is_valid_g1_subgroup(invalid.x, invalid.y));
+}
+
+#[test]
+fn eip196_is_valid_g1_subgroup_accepts_generator() {
+    let g = g1(G1_GEN_X, G1_GEN_Y);
+    assert!(Bn254::is_valid_g1_subgroup(g.x, g.y));
+}
+
 /// Source: bn256ScalarMul.json — case "cdetrio6" (3 * G = 3G)
 #[test]
 fn eip196_g1mul_scalar_three() {

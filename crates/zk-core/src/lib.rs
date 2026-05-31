@@ -284,6 +284,16 @@ impl Bn254 {
         y_sq == rhs
     }
 
+    pub fn is_valid_g1_subgroup(x: u256, y: u256) -> bool {
+        if !Self::is_valid_g1(x, y) {
+            return false;
+        }
+
+        let point = G1Projective::from(G1Affine { x, y });
+        let result = Self::g1_scalar_mul(point, Self::BASE_MODULUS);
+        result.z == u256::from(0u8)
+    }
+
     pub fn g1_scalar_mul(point: G1Projective, scalar: u256) -> G1Projective {
         if scalar == 0 {
             return G1Projective::identity();
@@ -323,6 +333,10 @@ impl G1Projective {
             y: u256::from(1u8),
             z: u256::from(0u8),
         }
+    }
+
+    pub fn is_identity(&self) -> bool {
+        self.z == u256::from(0u8)
     }
 
     pub fn ct_select(choice: u128, a: Self, b: Self) -> Self {
