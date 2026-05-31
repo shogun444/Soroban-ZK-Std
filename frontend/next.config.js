@@ -1,13 +1,18 @@
-const withMDX = require("@next/mdx")({
+
+const withMDX = require('@next/mdx')({
   extension: /\.mdx?$/,
   options: {
-    providerImportSource: null,
+    remarkPlugins: [require('remark-gfm')],
+    rehypePlugins: [],
+
   },
 });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  pageExtensions: ["js", "jsx", "mdx", "ts", "tsx"],
+
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
+
 };
 
 module.exports = withMDX(nextConfig);
