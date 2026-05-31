@@ -3,7 +3,7 @@ use soroban_sdk::crypto::bn254::{Bn254G1Affine as SdkG1Affine, Bn254G2Affine as 
 use soroban_sdk::BytesN;
 use soroban_sdk::Env;
 use soroban_sdk::Vec;
-use zk_core::{G1Affine, ZkError};
+use zk_core::{Bn254, G1Affine, ZkError};
 
 /// A BN254 G2 point in affine coordinates (X, Y).
 /// Coordinates are elements of the degree-2 extension field Fq²,
@@ -57,6 +57,10 @@ pub fn pairing_check(env: &Env, pairs: &[(G1Affine, G2Affine)]) -> Result<bool, 
     let mut vp2: Vec<SdkG2Affine> = Vec::new(env);
 
     for (g1, g2) in pairs {
+        if !Bn254::is_valid_g1_subgroup(g1.x, g1.y) {
+            return Err(ZkError::InvalidInput);
+        }
+
         let sdk_g1 = SdkG1Affine::from_bytes(BytesN::from_array(env, &g1_to_bytes(g1)));
         let sdk_g2 = SdkG2Affine::from_bytes(BytesN::from_array(env, &g2.to_bytes()));
 
@@ -153,5 +157,16 @@ mod tests {
         let env = Env::default();
         let result = pairing_check(&env, &[(g1_generator(), g2_generator())]);
         assert!(!result.unwrap(), "e(G1, G2) alone should not equal 1");
+    }
+
+    #[test]
+    fn test_pairing_rejects_invalid_g1_point() {
+        let env = Env::default();
+        let invalid_g1 = G1Affine {
+            x: u256::from(0u8),
+            y: u256::from(0u8),
+        };
+        let result = pairing_check(&env, &[(invalid_g1, g2_generator())]);
+        assert_eq!(result, Err(ZkError::InvalidInput));
     }
 }
