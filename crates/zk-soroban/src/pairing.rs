@@ -47,6 +47,15 @@ fn g1_to_bytes(g1: &G1Affine) -> [u8; 64] {
     bytes
 }
 
+fn validate_g2_coords(g2: &G2Affine) -> bool {
+    let (x0, x1) = g2.x;
+    let (y0, y1) = g2.y;
+    Bn254::is_valid_fq(x0)
+        && Bn254::is_valid_fq(x1)
+        && Bn254::is_valid_fq(y0)
+        && Bn254::is_valid_fq(y1)
+}
+
 /// Evaluates the BN254 pairing check e(A1, B1) * ... * e(An, Bn) == 1.
 pub fn pairing_check(env: &Env, pairs: &[(G1Affine, G2Affine)]) -> Result<bool, ZkError> {
     if pairs.is_empty() {
@@ -57,7 +66,7 @@ pub fn pairing_check(env: &Env, pairs: &[(G1Affine, G2Affine)]) -> Result<bool, 
     let mut vp2: Vec<SdkG2Affine> = Vec::new(env);
 
     for (g1, g2) in pairs {
-        if !Bn254::is_valid_g1_subgroup(g1.x, g1.y) {
+        if !Bn254::is_valid_g1_subgroup(g1.x, g1.y) || !validate_g2_coords(g2) {
             return Err(ZkError::InvalidInput);
         }
 
@@ -167,6 +176,20 @@ mod tests {
             y: u256::from(0u8),
         };
         let result = pairing_check(&env, &[(invalid_g1, g2_generator())]);
+        assert_eq!(result, Err(ZkError::InvalidInput));
+    }
+
+    #[test]
+    fn test_pairing_rejects_invalid_g2_components() {
+        let env = Env::default();
+        let mut invalid_g2 = g2_generator();
+        invalid_g2.x.0 = u256::from_str_radix(
+            "30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47",
+            16,
+        )
+        .unwrap();
+
+        let result = pairing_check(&env, &[(g1_generator(), invalid_g2)]);
         assert_eq!(result, Err(ZkError::InvalidInput));
     }
 }

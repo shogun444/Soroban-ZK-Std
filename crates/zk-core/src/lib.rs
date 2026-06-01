@@ -229,6 +229,16 @@ impl Bn254 {
     pub fn is_valid_scalar(val: u256) -> bool {
         val < Self::FR_MODULUS
     }
+
+    /// Validates a BN254 base field element in Fq.
+    ///
+    /// This ensures the element is within the field modulus and prevents
+    /// malformed G2 coordinate components from being passed into the native
+    /// host pairing call.
+    pub fn is_valid_fq(val: u256) -> bool {
+        val < Self::FQ_MODULUS
+    }
+
     pub fn add(a: u256, b: u256) -> u256 {
         Self::add_mod(a, b, Self::FR_MODULUS)
     }
