@@ -2704,6 +2704,7 @@ dependencies = [
  "ark-ec 0.6.0",
  "ark-ff 0.6.0",
  "ethnum",
+ "num-bigint",
  "num-traits",
  "soroban-sdk",
  "zk-core",

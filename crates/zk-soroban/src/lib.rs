@@ -2,6 +2,8 @@
 pub mod pairing;
 pub mod poseidon2;
 
+pub use pairing::{pairing_check, G2Affine};
+
 use ethnum::u256 as eth_u256;
 use soroban_sdk::{Env, U256};
 use zk_core::{Bn254, Fr, SafeFrom, ZkError};
