@@ -132,6 +132,22 @@ impl SafeFrom<u256> for Fr {
 /// The BN254 elliptic curve group parameters and arithmetic operations.
 pub struct Bn254;
 
+/// Affine point representation (x, y) on the BN254 curve
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AffinePoint {
+    pub x: u256,
+    pub y: u256,
+}
+
+/// Jacobian point representation (X, Y, Z) on the BN254 curve
+/// Affine coordinates (x, y) are related by: x = X/Z², y = Y/Z³
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct JacobianPoint {
+    pub x: u256,
+    pub y: u256,
+    pub z: u256,
+}
+
 impl Bn254 {
     /// BN254 scalar field modulus r (order of G1/G2).
     pub const BASE_MODULUS: ethnum::u256 = ethnum::u256::from_words(
