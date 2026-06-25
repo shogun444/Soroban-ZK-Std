@@ -1,3 +1,7 @@
+/vendor/
+**/*.rlib
+Cargo.lock.bak
+
 # Dependencies
 node_modules/
 **/node_modules/
@@ -5,9 +9,13 @@ node_modules/
 # Next.js build output
 .next/
 **/.next/
+out/
+dist/
 
 # Rust build output
 target/
+/vendor/
+
 **/target/
 
 # IDE
@@ -19,3 +27,9 @@ target/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated files
+feed.rss
+tree.txt
+issues.txt
+frontend/public/rss.xml
