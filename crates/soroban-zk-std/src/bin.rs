@@ -1,5 +1,5 @@
 use num_bigint::BigUint;
-use zk_soroban::G2Affine;
+use soroban_zk_std::G2Affine;
 
 fn main() {
     let g2 = G2Affine::generator();

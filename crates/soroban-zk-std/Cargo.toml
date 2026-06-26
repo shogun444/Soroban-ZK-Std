@@ -1,7 +1,9 @@
 [package]
-name = "zk-soroban"
+name = "soroban-zk-std"
 version = "0.1.0"
 edition = "2021"
+description = "A high-performance cryptographic standard library for Stellar Protocol 25 ZK-Primitives."
+repository = "https://github.com/georgegoldman/Soroban-ZK-Std"
 license.workspace = true
 
 [lib]

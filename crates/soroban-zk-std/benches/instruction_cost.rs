@@ -3,8 +3,8 @@
 use ethnum::u256;
 use soroban_sdk::{Env, U256};
 use zk_core::{Bn254, G1Affine, G1Projective};
-use zk_soroban::pairing::{pairing_check, G2Affine};
-use zk_soroban::poseidon2::hash_to_field;
+use soroban_zk_std::pairing::{pairing_check, G2Affine};
+use soroban_zk_std::poseidon2::hash_to_field;
 
 const MAX_INSTRUCTIONS: u64 = 100_000_000;
 const TOTAL_BUDGET: u64 = 400_000_000;

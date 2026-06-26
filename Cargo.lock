@@ -2115,8 +2115,8 @@ version = "0.1.0"
 dependencies = [
  "ethnum",
  "soroban-sdk",
+ "soroban-zk-std",
  "zk-core",
- "zk-soroban",
 ]
 
 [[package]]
@@ -2338,6 +2338,23 @@ dependencies = [
  "wasmi_arena",
  "wasmi_core",
  "wasmparser-nostd",
+]
+
+[[package]]
+name = "soroban-zk-std"
+version = "0.1.0"
+dependencies = [
+ "ark-bn254 0.6.0",
+ "ark-ec 0.6.0",
+ "ark-ff 0.6.0",
+ "ark-groth16",
+ "ark-relations",
+ "ark-snark",
+ "ark-std 0.6.0",
+ "ethnum",
+ "num-bigint",
+ "soroban-sdk",
+ "zk-core",
 ]
 
 [[package]]
@@ -2632,7 +2649,7 @@ name = "verifier-sample"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk",
- "zk-soroban",
+ "soroban-zk-std",
 ]
 
 [[package]]
@@ -3041,23 +3058,6 @@ dependencies = [
  "itertools 0.15.0",
  "num-traits",
  "proptest",
-]
-
-[[package]]
-name = "zk-soroban"
-version = "0.1.0"
-dependencies = [
- "ark-bn254 0.6.0",
- "ark-ec 0.6.0",
- "ark-ff 0.6.0",
- "ark-groth16",
- "ark-relations",
- "ark-snark",
- "ark-std 0.6.0",
- "ethnum",
- "num-bigint",
- "soroban-sdk",
- "zk-core",
 ]
 
 [[package]]
