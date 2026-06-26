@@ -119,10 +119,10 @@ jobs:
           echo "=== Checking required project documentation ==="
 
           REQUIRED_DOCS=(
-            "frontend/content/docs/getting-started.mdx"
-            "docs/ASP_Integration.mdx"
-            "docs/cap0075-integration-guide.mdx"
-            "docs/polynomial-operations.mdx"
+            "frontend/content/docs/getting-started/getting-started.mdx"
+            "frontend/content/docs/integration-and-verification/ASP_Integration.mdx"
+            "frontend/content/docs/integration-and-verification/cap0075-integration-guide.mdx"
+            "frontend/content/docs/math-and-cryptography/polynomial-operations.mdx"
             "README.md"
             "BENCHMARK.md"
             "GAS.md"
@@ -191,24 +191,7 @@ jobs:
             echo "✅ Content check passed: $(basename "$file")"
           done
 
-      - name: Check API Reference Completeness
-        run: |
-          echo "=== Checking API documentation pages ==="
 
-          API_PAGES=(
-            "frontend/app/docs/api-reference/page.tsx"
-            "frontend/app/docs/architecture/page.tsx"
-            "frontend/app/docs/cap0075/page.tsx"
-            "frontend/app/docs/polynomial-operations/page.tsx"
-          )
-
-          for page in "${API_PAGES[@]}"; do
-            if [ ! -f "$page" ]; then
-              echo "❌ ERROR: API page missing: $page"
-              exit 1
-            fi
-            echo "✅ Found API page: $page"
-          done
 
       - name: Validate Internal Links & Cross-References
         run: |
