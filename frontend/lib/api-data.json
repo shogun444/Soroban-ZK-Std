@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-06-26T15:48:27.569Z",
+  "generated_at": "2026-06-27T00:04:40.326Z",
   "version": "1.0.0",
   "crates": [
     {
-      "name": "zk-core",
-      "path": "crates/zk-core",
+      "name": "soroban-zk-core",
+      "path": "crates/soroban-zk-core",
       "description": "Pure cryptographic math. No Soroban dependencies. Compiles to no_std.",
       "items": [
         {
@@ -334,8 +334,8 @@
       ]
     },
     {
-      "name": "zk-soroban",
-      "path": "crates/zk-soroban",
+      "name": "soroban-zk-std",
+      "path": "crates/soroban-zk-std",
       "description": "Stellar integration. Traits that extend the Soroban Env, host-function mappings, and XDR conversion.",
       "items": [
         {

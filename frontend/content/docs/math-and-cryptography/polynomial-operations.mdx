@@ -37,7 +37,7 @@ where each coefficient `aᵢ ∈ Fr` (the BN254 scalar field with modulus `r`).
 ### Type Definition
 
 ```rust
-use soroban_zk_core::{Bn254, Fr, SafeFrom};
+use soroban_soroban_zk_core::{Bn254, Fr, SafeFrom};
 use ethnum::u256;
 
 /// A dense polynomial represented by its coefficient vector.
@@ -507,7 +507,7 @@ All polynomial coefficients and evaluation points must be in `[0, r)`.
 
 ```rust
 use ethnum::u256;
-use soroban_zk_core::Bn254;
+use soroban_soroban_zk_core::Bn254;
 
 // Define p(x) = 1 + 2x + 3x²
 let p = DensePolynomial::from_coefficients_vec(vec![

@@ -29,7 +29,7 @@
       <pubDate>Fri, 15 May 2026 00:00:00 GMT</pubDate>
       <dc:creator>georgegoldman</dc:creator>
       <description><![CDATA[<p>Added <code>BN254_Square_Root_Algorithm.md</code> — mathematical documentation for the BN254</p>
-<p>square root implementation in <code>zk-core</code>.</p>
+<p>square root implementation in <code>soroban-zk-core</code>.</p>
 
 <p><a href="https://github.com/zeemscript/Soroban-ZK-Std/commit/28004a99da440158c392784906c6eefd5fee8c64">View commit 28004a9</a></p>]]></description>
     </item>
@@ -58,7 +58,7 @@
       <guid isPermaLink="true">https://github.com/zeemscript/Soroban-ZK-Std/commit/a63a47d6b40da1ae9b14ed53ee26dbee7e813372</guid>
       <pubDate>Wed, 29 Apr 2026 00:00:00 GMT</pubDate>
       <dc:creator>georgegoldman</dc:creator>
-      <description><![CDATA[<p>Closes #9, #12, #17, #20, #21. Major arithmetic milestone for <code>zk-core</code>:</p>
+      <description><![CDATA[<p>Closes #9, #12, #17, #20, #21. Major arithmetic milestone for <code>soroban-zk-core</code>:</p>
 
 <ul>
 <li>BN254 base field (<code>Fq</code>) and scalar field (<code>Fr</code>) arithmetic.</li>
@@ -127,7 +127,7 @@
       <guid isPermaLink="true">https://github.com/zeemscript/Soroban-ZK-Std/commit/dbc26d5f15155263879b68144ba700a11a94f6f9</guid>
       <pubDate>Mon, 27 Apr 2026 00:00:00 GMT</pubDate>
       <dc:creator>Miracle656</dc:creator>
-      <description><![CDATA[<p>Implements Issue #8. Constant-time Fermat-based modular inversion in <code>zk-core</code>,</p>
+      <description><![CDATA[<p>Implements Issue #8. Constant-time Fermat-based modular inversion in <code>soroban-zk-core</code>,</p>
 <p>safe for use in WASM environments without variable-time branches.</p>
 
 <p><a href="https://github.com/zeemscript/Soroban-ZK-Std/commit/dbc26d5f15155263879b68144ba700a11a94f6f9">View commit dbc26d5</a></p>]]></description>
@@ -147,7 +147,7 @@
     </item>
 
     <item>
-      <title>feat(zk-core, zk-soroban): zero-copy U256 ↔ Fr field element mapping (#1)</title>
+      <title>feat(soroban-zk-core, soroban-zk-std): zero-copy U256 ↔ Fr field element mapping (#1)</title>
       <link>https://github.com/zeemscript/Soroban-ZK-Std/commit/673e2380b4503dee8d4329b25ba65cb195f520f3</link>
       <guid isPermaLink="true">https://github.com/zeemscript/Soroban-ZK-Std/commit/673e2380b4503dee8d4329b25ba65cb195f520f3</guid>
       <pubDate>Sun, 29 Mar 2026 00:00:00 GMT</pubDate>
@@ -160,7 +160,7 @@
 <li><code>Fr</code> newtype wrapping <code>ethnum::u256</code> with private invariant.</li>
 <li><code>SafeFrom&lt;u256&gt;</code> trait using constant-time <code>overflowing_sub</code> range check — no heap allocation, no panics.</li>
 <li><code>HostConvert</code> trait on <code>Env</code>: <code>fr_from_u256(&amp;self, U256) -&gt; Result&lt;Fr, ZkError&gt;</code>, all paths <code>#[inline(always)]</code> to minimise WASM stack depth.</li>
-<li>6 unit tests (zk-core) + 5 integration tests (zk-soroban) covering zero, boundary (r-1), modulus, and <code>u256::MAX</code>.</li>
+<li>6 unit tests (soroban-zk-core) + 5 integration tests (soroban-zk-std) covering zero, boundary (r-1), modulus, and <code>u256::MAX</code>.</li>
 </ul>
 
 <p><a href="https://github.com/zeemscript/Soroban-ZK-Std/commit/673e2380b4503dee8d4329b25ba65cb195f520f3">View commit 673e238</a></p>]]></description>
@@ -172,7 +172,7 @@
       <guid isPermaLink="true">https://github.com/zeemscript/Soroban-ZK-Std/commit/10b7df64c74999568ab123cf4050680843a9338e</guid>
       <pubDate>Sun, 29 Mar 2026 00:00:00 GMT</pubDate>
       <dc:creator>nasihudeen04</dc:creator>
-      <description><![CDATA[<p>Implements G1 Multi-Scalar Multiplication (MSM) for BN254 in <code>zk-core</code>.</p>
+      <description><![CDATA[<p>Implements G1 Multi-Scalar Multiplication (MSM) for BN254 in <code>soroban-zk-core</code>.</p>
 <p>Required for Groth16 and PLONK verifier construction on Soroban.</p>
 
 <p><a href="https://github.com/zeemscript/Soroban-ZK-Std/commit/10b7df64c74999568ab123cf4050680843a9338e">View commit 10b7df6</a></p>]]></description>

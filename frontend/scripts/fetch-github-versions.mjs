@@ -22,7 +22,7 @@ async function fetchVersions() {
     if (tags.length === 0) {
       console.log('No tags found on GitHub. Falling back to local Cargo.toml version...');
       // Fallback: read Cargo.toml
-      const cargoPath = path.join(__dirname, '..', '..', 'crates', 'zk-soroban', 'Cargo.toml');
+      const cargoPath = path.join(__dirname, '..', '..', 'crates', 'soroban-zk-std', 'Cargo.toml');
       const cargoContent = fs.readFileSync(cargoPath, 'utf8');
       const match = cargoContent.match(/version\s*=\s*"([^"]+)"/);
       const version = match ? `v${match[1]}` : 'v0.1.0';

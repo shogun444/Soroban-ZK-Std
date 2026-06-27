@@ -71,7 +71,7 @@ export default function DocsPage() {
 
         <CodeBlock
           code={`[dependencies]
-zk-soroban = { git = "https://github.com/georgegoldman/Soroban-ZK-Std" }`}
+soroban-zk-std = { git = "https://github.com/georgegoldman/Soroban-ZK-Std" }`}
           language="toml"
           filename="Cargo.toml"
           showLineNumbers={false}
@@ -83,7 +83,7 @@ zk-soroban = { git = "https://github.com/georgegoldman/Soroban-ZK-Std" }`}
 
         <CodeBlock
           code={`use soroban_sdk::{contract, contractimpl, Env, U256};
-use zk_soroban::ZkEnv;
+use soroban_zk_std::ZkEnv;
 
 #[contract]
 pub struct MyContract;
@@ -114,7 +114,7 @@ impl MyContract {
           <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 transition-colors">
             <h3 className="font-bold text-black dark:text-white mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-cyan-500" />
-              zk-core
+              soroban-zk-core
             </h3>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
               Pure math. Elliptic curve logic, field arithmetic, and U256
@@ -124,7 +124,7 @@ impl MyContract {
           <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 transition-colors">
             <h3 className="font-bold text-black dark:text-white mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-violet-500" />
-              zk-soroban
+              soroban-zk-std
             </h3>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
               Stellar integration. Traits that extend the Soroban Env,

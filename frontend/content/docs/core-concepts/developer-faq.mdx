@@ -43,7 +43,7 @@ make all
 
 One of your dependencies or your own code is pulling in the Rust standard library, which is unavailable in the `wasm32-unknown-unknown` target.
 
-**Check your own code:** every file in `soroban-zk-core` and `zk-soroban` must begin with `#![no_std]`. If this attribute is missing, the compiler assumes `std`.
+**Check your own code:** every file in `soroban-zk-core` and `soroban-zk-std` must begin with `#![no_std]`. If this attribute is missing, the compiler assumes `std`.
 
 **Find the offending dependency:**
 
@@ -74,7 +74,7 @@ xcode-select --install
 
 ```bash
 cargo test -p soroban-zk-core
-cargo test -p zk-soroban
+cargo test -p soroban-zk-std
 ```
 
 To run a specific test by name:
@@ -168,7 +168,7 @@ fn measure_my_function() {
 Run with `--nocapture` to see the printed value:
 
 ```bash
-cargo test -p zk-soroban -- measure_my_function --nocapture
+cargo test -p soroban-zk-std -- measure_my_function --nocapture
 ```
 
 ---
@@ -198,7 +198,7 @@ cargo bloat --target wasm32-unknown-unknown --release -p your-contract --crates
 
 Soroban contracts compile to WASM and run inside the Soroban Virtual Machine, which does not provide a host operating system. The Rust standard library (`std`) depends on OS primitives such as file I/O, threads, and a heap allocator. Without these, `std` cannot link, so the WASM binary must be built without it.
 
-`soroban-zk-core` contains only pure field arithmetic, which needs nothing from `std`. `zk-soroban` depends on the Soroban SDK, which provides its own `no_std`-compatible allocator when needed.
+`soroban-zk-core` contains only pure field arithmetic, which needs nothing from `std`. `soroban-zk-std` depends on the Soroban SDK, which provides its own `no_std`-compatible allocator when needed.
 
 ---
 
@@ -256,14 +256,14 @@ Follow the project's architecture rule:
 | What you are adding | Where it goes |
 |--------------------|---------------|
 | A new curve, field, or hash primitive | `crates/soroban-zk-core/` — no Soroban imports allowed here |
-| A developer tool for use inside contracts | `crates/zk-soroban/` — may use `soroban_sdk` |
+| A developer tool for use inside contracts | `crates/soroban-zk-std/` — may use `soroban_sdk` |
 | An integration test or sample contract | `contracts/` |
 
 Before submitting a pull request, verify that your code compiles to WASM without growing the binary by more than 5 KB:
 
 ```bash
 make build-wasm
-twiggy top target/wasm32-unknown-unknown/release/zk_soroban.wasm
+twiggy top target/wasm32-unknown-unknown/release/soroban_zk_std.wasm
 ```
 
 ---

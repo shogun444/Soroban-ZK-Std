@@ -50,12 +50,12 @@ This generates a basic Soroban contract scaffold with a `Cargo.toml`, `src/lib.r
 
 ## Step 2: Add Soroban-ZK-Std as a Dependency
 
-Edit your `Cargo.toml` to add the `zk-soroban` crate:
+Edit your `Cargo.toml` to add the `soroban-zk-std` crate:
 
 ```toml
 [dependencies]
 soroban-sdk = "25.0.0"
-zk-soroban = { git = "https://github.com/georgegoldman/Soroban-ZK-Std" }
+soroban-zk-std = { git = "https://github.com/georgegoldman/Soroban-ZK-Std" }
 
 # You may also need these for field arithmetic:
 ethnum = "1.3"
@@ -71,15 +71,15 @@ In your `src/lib.rs`, import the types and functions you need:
 ```rust
 #![no_std]
 use soroban_sdk::{contract, contractimpl, Env, Vec};
-use soroban_zk_core::{G1Affine, Bn254};
-use zk_soroban::pairing::{G2Affine, pairing_check};
-use zk_soroban::poseidon2::Poseidon2;
-use zk_soroban::ZkError;
+use soroban_soroban_zk_core::{G1Affine, Bn254};
+use soroban_zk_std::pairing::{G2Affine, pairing_check};
+use soroban_zk_std::poseidon2::Poseidon2;
+use soroban_zk_std::ZkError;
 ```
 
 ---
 
-## Step 4: Use Pairing Checks (Groth16 Verification)
+## Step 4: Verify a Groth16 Proof
 
 Here is a minimal contract that exposes a Groth16 proof verification endpoint:
 
@@ -90,55 +90,33 @@ pub struct ZKVerifier;
 #[contractimpl]
 impl ZKVerifier {
     /// Verifies a Groth16 proof given the verification key and public inputs.
-    ///
-    /// # Parameters
-    /// - `proof_a`, `proof_b`, `proof_c`: The three proof points
-    /// - `vk_alpha_g1`, `vk_beta_g2`, `vk_gamma_g2`, `vk_delta_g2`: Verification key points
-    /// - `public_inputs`: Serialized public inputs
-    ///
-    /// # Returns
-    /// `true` if the proof is valid, `false` otherwise.
     pub fn verify(
         env: Env,
-        proof_a_bytes: Vec<u8>,
-        proof_b_bytes: Vec<u8>,
-        proof_c_bytes: Vec<u8>,
-        vk_alpha_g1_bytes: Vec<u8>,
-        vk_beta_g2_bytes: Vec<u8>,
-        vk_gamma_g2_bytes: Vec<u8>,
-        vk_delta_g2_bytes: Vec<u8>,
-        public_inputs: Vec<u8>,
+        proof_bytes: Bytes,
+        vk_bytes: Bytes,
+        public_inputs_bytes: Bytes,
     ) -> bool {
-        // Deserialize points from bytes
-        // Note: In a real contract, you would implement from_bytes
-        // for each type. See the zk-soroban crate for helpers.
+        // 1. Deserialize the Groth16 Proof (A, B, C points)
+        let mut proof_buf = [0u8; 256];
+        proof_bytes.copy_into_slice(&mut proof_buf);
+        let proof = Groth16Proof::from_bytes(&proof_buf).expect("Invalid proof format");
 
-        // Build the pairing check pairs
-        let pairs = [
-            (
-                deserialize_g1(&proof_a_bytes),
-                deserialize_g2(&proof_b_bytes),
-            ),
-            (
-                negate_g1(deserialize_g1(&public_inputs)),
-                deserialize_g2(&vk_gamma_g2_bytes),
-            ),
-            (
-                negate_g1(deserialize_g1(&proof_c_bytes)),
-                deserialize_g2(&vk_delta_g2_bytes),
-            ),
-            (
-                negate_g1(deserialize_g1(&vk_alpha_g1_bytes)),
-                deserialize_g2(&vk_beta_g2_bytes),
-            ),
-        ];
+        // 2. Deserialize the Verifying Key
+        // In a real contract, the Verifying Key would be stored in the contract's persistent state.
+        let vk = get_verifying_key(); // Fetch from storage
 
-        pairing_check(&env, &pairs).unwrap_or(false)
+        // 3. Parse public inputs
+        let mut pi_buf = [0u8; 32];
+        public_inputs_bytes.copy_into_slice(&mut pi_buf);
+        let public_input = ethnum::u256::from_be_bytes(pi_buf);
+
+        // 4. VERIFY THE ZERO KNOWLEDGE PROOF!
+        soroban_zk_std::groth16::groth16_verify(&env, &vk, &proof, &[public_input]).unwrap_or(false)
     }
 }
 ```
 
-> **Key insight:** The pairing check evaluates `e(A₁, B₁) · e(A₂, B₂) · ... · e(Aₙ, Bₙ) == 1`. Negating certain G1 points achieves the standard Groth16 verification equation.
+> **Key insight:** The `groth16_verify` function automatically delegates to the optimal `bn254_multi_pairing_check` host function under the hood, ensuring the verification uses minimal WASM instructions and gas.
 
 
 ## Step 5: Use Poseidon2 Hashing
@@ -233,61 +211,56 @@ soroban contract invoke \
 
 ## Complete Example Contract
 
-Here is a complete, minimal contract that uses Soroban-ZK-Std:
+Here is a complete, minimal contract that uses Soroban-ZK-Std to implement a **Compliant Private USDC** Shielded Transfer:
 
 ```rust
 #![no_std]
-use soroban_sdk::{contract, contractimpl, Env};
+use soroban_sdk::{contract, contractimpl, Address, Bytes, Env};
 use ethnum::u256;
 use soroban_zk_core::G1Affine;
-use zk_soroban::pairing::{G2Affine, pairing_check};
-use zk_soroban::poseidon2::Poseidon2;
-use zk_soroban::ZkError;
+use soroban_zk_std::pairing::G2Affine;
+use soroban_zk_std::groth16::{groth16_verify, Groth16Proof, Groth16VerifyingKey};
 
 #[contract]
-pub struct MinimalZK;
+pub struct CompliantShieldedUSDC;
 
 #[contractimpl]
-impl MinimalZK {
-    /// Returns the Poseidon2 hash of two u256 values.
-    pub fn hash(env: Env, a: u256, b: u256) -> u256 {
-        Poseidon2::hash_two(&env, a, b)
-    }
+impl CompliantShieldedUSDC {
+    pub fn transfer_shielded(
+        env: Env,
+        sender: Address,
+        receiver: Address,
+        proof_bytes: Bytes,
+        public_inputs_bytes: Bytes,
+    ) {
+        sender.require_auth();
 
-    /// Returns the result of a BN254 pairing check `e(G1, G2)`.
-    /// This is a minimal sanity check for contract integration testing.
-    pub fn check_pairing(env: Env) -> bool {
-        let g1 = G1Affine {
-            x: u256::from(1u8),
-            y: u256::from(2u8),
-        };
-        let g2 = G2Affine {
-            x: (
-                u256::from_str_radix("1800deef121f1e764ff97665de1f4e53e2d8f75cfb208be8a76c26f20b32c0b9", 16).unwrap(),
-                u256::from_str_radix("1800deef121f1e764ff97665de1f4e53e2d8f75cfb208be8a76c26f20b32c0b9", 16).unwrap(),
-            ),
-            y: (
-                u256::from_str_radix("198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2", 16).unwrap(),
-                u256::from_str_radix("1800deef121f1e764ff97665de1f4e53e2d8f75cfb208be8a76c26f20b32c0b9", 16).unwrap(),
-            ),
-        };
-        let pairs = [(g1, g2)];
-        pairing_check(&env, &pairs).unwrap_or(false)
+        let mut proof_buf = [0u8; 256];
+        proof_bytes.copy_into_slice(&mut proof_buf);
+        let proof = Groth16Proof::from_bytes(&proof_buf).expect("Invalid proof");
+
+        let vk = get_verifying_key();
+
+        let mut pi_buf = [0u8; 32];
+        public_inputs_bytes.copy_into_slice(&mut pi_buf);
+        let public_input = u256::from_be_bytes(pi_buf);
+
+        let is_valid = groth16_verify(&env, &vk, &proof, &[public_input]).unwrap();
+        if !is_valid {
+            panic!("ZK Proof is invalid!");
+        }
+        
+        env.events().publish((sender, receiver), "Shielded Transfer Verified");
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use soroban_sdk::Env;
-
-    #[test]
-    fn test_hash() {
-        let env = Env::default();
-        let contract_id = env.register_contract(None, MinimalZK);
-        let client = MinimalZKClient::new(&env, &contract_id);
-        let result = client.hash(&u256::from(1u8), &u256::from(2u8));
-        assert!(result != u256::from(0u8));
+fn get_verifying_key<'a>() -> Groth16VerifyingKey<'a> {
+    Groth16VerifyingKey {
+        alpha_g1: G1Affine { x: u256::from(0u8), y: u256::from(0u8) },
+        beta_g2: G2Affine { x: (u256::from(0u8), u256::from(0u8)), y: (u256::from(0u8), u256::from(0u8)) },
+        gamma_g2: G2Affine { x: (u256::from(0u8), u256::from(0u8)), y: (u256::from(0u8), u256::from(0u8)) },
+        delta_g2: G2Affine { x: (u256::from(0u8), u256::from(0u8)), y: (u256::from(0u8), u256::from(0u8)) },
+        ic: &[],
     }
 }
 ```
@@ -300,7 +273,7 @@ mod test {
 |---------|-------------|----------|
 | **WASM binary too large (>64KB)** | Accidental `std` dependency | Ensure all dependencies are `no_std`-compatible. Check with `cargo tree` for `std` features. |
 | **Instruction budget exceeded** | Too many pairing pairs | Keep the number of `(G1, G2)` pairs in a single `pairing_check` call under 10 for typical budgets. |
-| **Compilation error: `use of undeclared crate or module`** | Missing dependency | Double-check your `Cargo.toml` includes `zk-soroban` and `soroban-zk-core`. |
+| **Compilation error: `use of undeclared crate or module`** | Missing dependency | Double-check your `Cargo.toml` includes `soroban-zk-std` and `soroban-zk-core`. |
 | **`pairing_check` returns `InvalidInput`** | Empty pairs slice | Ensure your pairs array has at least one `(G1, G2)` tuple. |
 
 ---

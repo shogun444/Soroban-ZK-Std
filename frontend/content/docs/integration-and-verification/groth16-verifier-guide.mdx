@@ -17,7 +17,7 @@ This guide explains the core steps for a Soroban contract that verifies Groth16 
 
 - Contract scaffold and dependencies
 - Verification key and proof data shapes
-- BN254 pairing checks with `zk-soroban`
+- BN254 pairing checks with `soroban-zk-std`
 - Safe scalar conversion using `fr_from_u256`
 - Building, testing, and deploying the contract
 
@@ -44,12 +44,12 @@ soroban --version
 
 ## 3. Add dependencies
 
-Edit your contract's `Cargo.toml` and add the `soroban-sdk` and `zk-soroban` crates:
+Edit your contract's `Cargo.toml` and add the `soroban-sdk` and `soroban-zk-std` crates:
 
 ```toml
 [dependencies]
 soroban-sdk = "25.0.0"
-zk-soroban = { git = "https://github.com/paulpeter32-coder/Soroban-ZK-Std.git" }
+soroban-zk-std = { git = "https://github.com/paulpeter32-coder/Soroban-ZK-Std.git" }
 ethnum = "1.3"
 ```
 
@@ -64,8 +64,8 @@ In `src/lib.rs`, import the core ZK and Soroban types:
 ```rust
 #![no_std]
 use soroban_sdk::{contract, contractimpl, Env, Vec, U256};
-use soroban_zk_core::{G1Affine, ZkError};
-use zk_soroban::{pairing::{pairing_check, G2Affine}, HostConvert};
+use soroban_soroban_zk_core::{G1Affine, ZkError};
+use soroban_zk_std::{pairing::{pairing_check, G2Affine}, HostConvert};
 ```
 
 This gives you:
@@ -185,7 +185,7 @@ impl Groth16Verifier {
 
 In practice, proofs and verification keys arrive as bytes from your off-chain prover.
 
-The `zk-soroban` crate serializes points in the same format expected by Soroban's BN254 host APIs.
+The `soroban-zk-std` crate serializes points in the same format expected by Soroban's BN254 host APIs.
 Use `G1Affine` and `G2Affine` helpers to build points from bytes.
 
 If you pass bytes into a contract, deserialize them in the contract before calling `pairing_check`.
@@ -194,7 +194,7 @@ If you pass bytes into a contract, deserialize them in the contract before calli
 
 ## 9. Safe scalar conversion with `fr_from_u256`
 
-Public inputs must be BN254 field elements. `zk-soroban` makes this easy:
+Public inputs must be BN254 field elements. `soroban-zk-std` makes this easy:
 
 ```rust
 let field_elem = env.fr_from_u256(input_u256)?;
@@ -212,8 +212,8 @@ Below is a minimal verifier contract skeleton.
 ```rust
 #![no_std]
 use soroban_sdk::{contract, contractimpl, Env, U256, Vec};
-use soroban_zk_core::{G1Affine, ZkError};
-use zk_soroban::{pairing::{pairing_check, G2Affine}, HostConvert};
+use soroban_soroban_zk_core::{G1Affine, ZkError};
+use soroban_zk_std::{pairing::{pairing_check, G2Affine}, HostConvert};
 
 pub struct Groth16Proof {
     pub a: G1Affine,

@@ -54,7 +54,7 @@ pub struct G1Affine {
 }
 ```
 
-#### `G2Affine` (from `zk-soroban::pairing`)
+#### `G2Affine` (from `soroban-zk-std::pairing`)
 A BN254 G2 point in affine coordinates. G2 lives in the degree-2 extension field Fq², so each coordinate is a pair `(c0, c1)` representing `c0 + c1·u`:
 
 ```rust
@@ -88,8 +88,8 @@ Bytes  96..128:  y.0 (Y real / c0, Big-Endian)
 The main entry point for pairing verification:
 
 ```rust
-use zk_soroban::pairing::{pairing_check, G2Affine};
-use soroban_zk_core::G1Affine;
+use soroban_zk_std::pairing::{pairing_check, G2Affine};
+use soroban_soroban_zk_core::G1Affine;
 
 /// Evaluates the BN254 pairing check:
 /// e(A₁, B₁) · e(A₂, B₂) · ... · e(Aₙ, Bₙ) == 1
@@ -122,8 +122,8 @@ A Groth16 verification key consists of several G1 and G2 points. These are gener
 
 ```rust
 use ethnum::u256;
-use soroban_zk_core::G1Affine;
-use zk_soroban::pairing::G2Affine;
+use soroban_soroban_zk_core::G1Affine;
+use soroban_zk_std::pairing::G2Affine;
 
 // These would come from your trusted setup ceremony
 struct VerificationKey {
@@ -139,7 +139,7 @@ struct VerificationKey {
 
 ```rust
 use soroban_sdk::Env;
-use zk_soroban::pairing::pairing_check;
+use soroban_zk_std::pairing::pairing_check;
 
 struct Proof {
     a: G1Affine,
@@ -205,7 +205,7 @@ fn test_pairing_identity() {
 CAP-0075 also provides a native `poseidon2_permutation` host function, exposed through:
 
 ```rust
-use zk_soroban::poseidon2;
+use soroban_zk_std::poseidon2;
 ```
 
 Poseidon2 is a ZK-friendly hash function optimized for arithmetic circuits. The native host function is **47% faster** than a software implementation, and the library's wrapper handles:
@@ -218,7 +218,7 @@ Poseidon2 is a ZK-friendly hash function optimized for arithmetic circuits. The 
 ### Usage
 
 ```rust
-use zk_soroban::poseidon2::Poseidon2;
+use soroban_zk_std::poseidon2::Poseidon2;
 use soroban_sdk::Env;
 
 fn hash_inputs(env: &Env, left: u256, right: u256) -> u256 {
@@ -239,10 +239,10 @@ fn hash_inputs(env: &Env, left: u256, right: u256) -> u256 {
 
 ## Scalar Field Conversion
 
-In addition to pairing, `zk-soroban` provides the `HostConvert` trait for safe conversion between Soroban's `U256` and BN254's scalar field `Fr`:
+In addition to pairing, `soroban-zk-std` provides the `HostConvert` trait for safe conversion between Soroban's `U256` and BN254's scalar field `Fr`:
 
 ```rust
-use zk_soroban::HostConvert;
+use soroban_zk_std::HostConvert;
 use soroban_sdk::{Env, U256};
 
 fn convert_scalar(env: &Env, val: U256) -> Result<Fr, ZkError> {
@@ -256,7 +256,7 @@ This ensures that all field elements entering the ZK system are properly validat
 
 ## Summary
 
-The `zk-soroban` crate bridges the gap between Stellar's raw CAP-0075 host functions and the developer experience needed to build production ZK applications:
+The `soroban-zk-std` crate bridges the gap between Stellar's raw CAP-0075 host functions and the developer experience needed to build production ZK applications:
 
 1. **`pairing_check()`** wraps `env.crypto().bn254().pairing_check()` with proper type safety and serialization
 2. **`G2Affine`** handles the non-trivial Fq² serialization per CAP-0074 §3.2

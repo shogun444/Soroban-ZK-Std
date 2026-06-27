@@ -21,11 +21,11 @@ In this repository, that boundary usually means one of two things:
 
 The library already exposes the boundary primitives you need:
 
-- `soroban_zk_core::Fr` for canonical BN254 scalar elements
-- `soroban_zk_core::SafeFrom` for fallible, no-panic range validation
-- `zk_soroban::HostConvert` for `Env::fr_from_u256()`
-- `zk_soroban::ZkEnv` for `Env::is_bn254_scalar()`
-- `zk_soroban::pairing::G2Affine` for Fq2 coordinates at the pairing boundary
+- `soroban_soroban_zk_core::Fr` for canonical BN254 scalar elements
+- `soroban_soroban_zk_core::SafeFrom` for fallible, no-panic range validation
+- `soroban_zk_std::HostConvert` for `Env::fr_from_u256()`
+- `soroban_zk_std::ZkEnv` for `Env::is_bn254_scalar()`
+- `soroban_zk_std::pairing::G2Affine` for Fq2 coordinates at the pairing boundary
 
 If you are building a higher-level multi-limb wrapper, keep the wrapper at the edge of the system and convert into canonical BN254 types as early as possible.
 
@@ -78,8 +78,8 @@ The safest integration pattern is:
 
 ```rust
 use soroban_sdk::{Env, U256};
-use soroban_zk_core::{Fr, ZkError};
-use zk_soroban::{HostConvert, ZkEnv};
+use soroban_soroban_zk_core::{Fr, ZkError};
+use soroban_zk_std::{HostConvert, ZkEnv};
 
 pub fn load_foreign_scalar(env: &Env, raw: U256) -> Result<Fr, ZkError> {
     if !env.is_bn254_scalar(raw) {
@@ -155,10 +155,10 @@ That ordering matches the host expectation used by `pairing_check()`.
 
 ```rust
 use soroban_sdk::Env;
-use soroban_zk_core::G1Affine;
-use zk_soroban::pairing::{pairing_check, G2Affine};
+use soroban_soroban_zk_core::G1Affine;
+use soroban_zk_std::pairing::{pairing_check, G2Affine};
 
-pub fn verify_pairing(env: &Env, p: G1Affine, q: G2Affine) -> Result<bool, soroban_zk_core::ZkError> {
+pub fn verify_pairing(env: &Env, p: G1Affine, q: G2Affine) -> Result<bool, soroban_soroban_zk_core::ZkError> {
     pairing_check(env, &[(p, q)])
 }
 ```

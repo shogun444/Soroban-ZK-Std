@@ -5,7 +5,7 @@ version: "minor"
 author: "Salmatcre8"
 commit: "65feaed6e0bf7646c619973bc7062a190b9ac8ba"
 closes: ["#2"]
-tags: ["poseidon2", "hash", "cap-0075", "zk-soroban"]
+tags: ["poseidon2", "hash", "cap-0075", "soroban-zk-std"]
 ---
 
 Implements Issue #2. Poseidon2 sponge over BN254 Fr (t=3, rate=2, capacity=1):

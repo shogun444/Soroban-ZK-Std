@@ -25,14 +25,14 @@ const OUT_FILE = resolve(__dirname, "../lib/api-data.json");
 
 const CRATES = [
   {
-    name: "zk-core",
-    srcPath: join(REPO_ROOT, "crates/zk-core/src"),
+    name: "soroban-zk-core",
+    srcPath: join(REPO_ROOT, "crates/soroban-zk-core/src"),
     description:
       "Pure cryptographic math. No Soroban dependencies. Compiles to no_std.",
   },
   {
-    name: "zk-soroban",
-    srcPath: join(REPO_ROOT, "crates/zk-soroban/src"),
+    name: "soroban-zk-std",
+    srcPath: join(REPO_ROOT, "crates/soroban-zk-std/src"),
     description:
       "Stellar integration. Traits that extend the Soroban Env, host-function mappings, and XDR conversion.",
   },

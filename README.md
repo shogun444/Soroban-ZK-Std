@@ -1,5 +1,6 @@
 # Soroban-ZK-Std
 **A High-Performance Cryptographic Standard Library for Stellar Protocol 25 ZK-Primitives.**
+*Built by [Neslabs](https://neslabs.io/)*
 
 ## The Unsolved Problem in Stellar ZK
 While Protocol 25 ("X-Ray") introduced native host functions for BN254 pairing checks and Poseidon hashing, a massive **Developer Experience (DX)** gap remains. To build a private stablecoin or compliant RWA protocol on Stellar today, developers face three "Hard Stops":
@@ -39,7 +40,7 @@ zk-soroban = { git = "https://github.com/georgegoldman/Soroban-ZK-Std" }
 Soroban-ZK-Std is a high-performance, no_std cryptographic library optimized specifically for the Stellar network. Because we operate within the strict limits of the Soroban Virtual Machine, our contribution standards are higher than standard Rust projects.
 
 💬 Community
-Join our Telegram group to collaborate with other contributors and get real-time support: https://t.me/+beBHvsplOPVmYmM0
+Join our Telegram group to collaborate with other contributors and get real-time support: https://t.me/SorobanZKStd
 
 ### 🚀 Getting Started
 1. **Prerequisites**
